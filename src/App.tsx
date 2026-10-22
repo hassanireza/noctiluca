@@ -42,7 +42,7 @@ export default function App() {
     <main className="shell" data-view={active ? 'play' : 'map'}>
       <Backdrop />
       <header className="topbar">
-        <button className="brand" onClick={() => (active ? close() : window.scrollTo({ top: 0, behavior: 'smooth' }))} aria-label={active ? 'Back to map' : 'Scroll to top'}>
+        <button className="brand" onClick={() => (active ? close() : window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }))} aria-label={active ? 'Back to map' : 'Scroll to the title and your progress'}>
           <CellArt size={34} rings={false} /><span>NOCTILUCA</span>
         </button>
         <div className="top-stats">

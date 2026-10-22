@@ -19,10 +19,11 @@ export function MapScreen({ progress, focusLevel, onOpen }: Props) {
   const returning = progress.done.length > 0;
   const episodes = useMemo(() => Array.from({ length: EPISODE_COUNT }, (_, i) => EPISODE_COUNT - i), []);
 
-  // Land where the player is: their last level, else their next level. Brand-new players see the hero.
+  // Land where the player is. The title/hero now sits at the bottom of the path (the surface), so beginners land right on it.
   useEffect(() => {
     const target = focusLevel ?? (returning ? resume : null);
-    if (target === null) { window.scrollTo(0, 0); return; }
+    const toBottom = () => window.scrollTo(0, document.documentElement.scrollHeight);
+    if (target === null || episodeOf(target) <= 2) { requestAnimationFrame(toBottom); return; }
     requestAnimationFrame(() => document.getElementById(`ep-${episodeOf(target)}`)?.scrollIntoView({ block: 'center' }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -31,21 +32,8 @@ export function MapScreen({ progress, focusLevel, onOpen }: Props) {
 
   return (
     <>
-      <section className="hero">
-        <div className="hero-art" aria-hidden="true"><CellArt size={300} /></div>
-        <div className="hero-copy">
-          <div className="eyebrow">A {LEVEL_COUNT.toLocaleString()}-LEVEL PYTHON ODYSSEY</div>
-          <h1>Find your way<br /><em>through the dark.</em></h1>
-          <p>Fifty constellations. A thousand small programs. Light each star by writing the Python that makes it glow.</p>
-          <div className="meter" role="img" aria-label={`${progress.done.length} of ${LEVEL_COUNT} stars lit`}>
-            <div className="meter-bar"><i style={{ width: `${Math.max(1.5, (progress.done.length / LEVEL_COUNT) * 100)}%` }} /></div>
-            <div className="meter-text"><b>{progress.done.length}</b> / {LEVEL_COUNT.toLocaleString()} stars lit</div>
-          </div>
-        </div>
-      </section>
-
       <section className="journey" aria-label="Episodes">
-        <div className="section-title"><div className="eyebrow">CLIMB UPWARD · LEVEL 001 AWAITS BELOW</div></div>
+        <div className="section-title"><div className="eyebrow">THE SUMMIT · LEVEL 1000</div></div>
         <div className="episode-list">
           {episodes.map((ep) => {
             const items = questions.slice((ep - 1) * LEVELS_PER_EPISODE, ep * LEVELS_PER_EPISODE);
@@ -61,8 +49,20 @@ export function MapScreen({ progress, focusLevel, onOpen }: Props) {
             );
           })}
         </div>
-        <div className="origin">· · ·<br />THE SURFACE · WHERE EVERY TRACE BEGINS</div>
       </section>
+      <section className="hero" id="surface">
+        <div className="hero-art" aria-hidden="true"><CellArt size={300} /></div>
+        <div className="hero-copy">
+          <div className="eyebrow">A {LEVEL_COUNT.toLocaleString()}-LEVEL PYTHON ODYSSEY</div>
+          <h1>Find your way<br /><em>through the dark.</em></h1>
+          <p>Fifty constellations. A thousand small programs. Light each star by writing the Python that makes it glow.</p>
+          <div className="meter" role="img" aria-label={`${progress.done.length} of ${LEVEL_COUNT} stars lit`}>
+            <div className="meter-bar"><i style={{ width: `${Math.max(1.5, (progress.done.length / LEVEL_COUNT) * 100)}%` }} /></div>
+            <div className="meter-text"><b>{progress.done.length}</b> / {LEVEL_COUNT.toLocaleString()} stars lit</div>
+          </div>
+        </div>
+      </section>
+
 
       <nav className="dock" aria-label="Quick actions">
         <button className="dock-main" onClick={() => onOpen(resume)}>

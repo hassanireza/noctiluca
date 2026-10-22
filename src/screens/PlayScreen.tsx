@@ -67,7 +67,7 @@ export function PlayScreen({ id, solved, onSolve, onOpen, onBack }: Props) {
       </div>
 
       <div className="question-head">
-        <div className="eyebrow">{q.world}</div>
+        <div className="eyebrow">{q.world}{q.topic ? ` · ${q.topic}` : ''}</div>
         <h1>{q.title}</h1>
         <p>{q.prompt}</p>
         <div className="reward"><Sparkles size={13} /> {solved ? 'Already lit' : `+${q.xp} essence`}<span>·</span>aim for 20 lines or fewer</div>

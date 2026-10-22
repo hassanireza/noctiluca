@@ -1,5 +1,6 @@
 import{episodeNames}from'./episodes';
-export type Question={id:number;world:string;title:string;prompt:string;hint:string;starter:string;target:string;test?:string;xp:number};
+import{buildLevels,titleFor}from'./puzzles';
+export type Question={id:number;world:string;title:string;prompt:string;hint:string;starter:string;target:string;test?:string;xp:number;topic?:string};
 const openingQuestions:Question[]=[
 {id:1,world:'I · FIRST LIGHT',title:'A small signal',prompt:'Print the word hello.',hint:'One built-in function is enough.',starter:'# let the light speak\n',target:'print("hello")',xp:10},
 {id:2,world:'I · FIRST LIGHT',title:'Echo chamber',prompt:'Print the number 42.',hint:'Numbers do not need quotation marks.',starter:'',target:'print(42)',xp:10},
@@ -22,43 +23,9 @@ const openingQuestions:Question[]=[
 {id:19,world:'IV · ECLIPSE',title:'Prime signal',prompt:'Print True if 17 is prime.',hint:'Try divisors from 2 up to the square root.',starter:'',target:'n = 17\nprint(all(n % i for i in range(2, int(n ** 0.5) + 1)))',xp:24},
 {id:20,world:'V · AFTERGLOW',title:'The final pattern',prompt:'Print a centered pyramid of stars with 4 rows.',hint:'Each row needs leading spaces and an odd number of stars.',starter:'',target:'for i in range(4):\n    print(" " * (3 - i) + "*" * (2 * i + 1))',xp:28}
 ];
-
-const words=['raven','velvet','cipher','nebula','shadow','signal','winter','silver','lumen','midnight'];
 const palette=['#6fe3f2','#8fb4ff','#b79cff','#ff9ec2','#ffcf86','#7df0c6','#f08fe0','#7fd0ff','#ffb48a','#b6ee86'];
-function makeQuestion(id:number):Question{
-  const tier=Math.min(10,Math.ceil(id/100));
-  const local=id%100;
-  const n=2+(local*7)%31;
-  const word=words[(local+tier)%words.length];
-  const templates:Array<[string,string,string,string]>=[
-    [`Print the word "${word}".`,`print("${word}")`,'Strings are text between quotes.','Output'],
-    [`Print the result of ${n} multiplied by ${tier+2}.`,`print(${n} * ${tier+2})`,'Multiply with the * operator.','Arithmetic'],
-    [`Print "${word}" backwards.`,`print("${word}"[::-1])`,'A slice can step backwards with ::-1.','String slicing'],
-    [`Print the length of "${word}".`,`print(len("${word}"))`,'len() counts characters.','String length'],
-    [`Print every number from 1 to ${Math.min(8,3+tier)}.`,`for i in range(1, ${Math.min(8,3+tier)+1}):\n    print(i)`,'range ends before its final value.','Loops'],
-    [`Print only numbers divisible by ${2+(tier%4)} from 1 through ${Math.min(20,n)}.`,`for i in range(1, ${Math.min(20,n)+1}):\n    if i % ${2+(tier%4)} == 0:\n        print(i)`,'Use the remainder operator inside a loop.','Conditions'],
-    [`Create a function called amplify that returns its input times ${tier+1}. Test it with ${n}.`,`def amplify(x):\n    return x * ${tier+1}\nprint(amplify(${n}))`,'Define a function, then call it.','Functions'],
-    [`Print the sum of [${n}, ${n+2}, ${n+4}].`,`print(sum([${n}, ${n+2}, ${n+4}]))`,'sum() accepts a list of numbers.','Collections'],
-    [`Print how many times "${word[0]}" appears in "${word}${word[0]}".`,`print("${word}${word[0]}".count("${word[0]}"))`,'Use the string count method.','String methods'],
-    [`Print a ${Math.min(5,2+tier%4)}-row stair of stars.`,`for i in range(1, ${Math.min(5,2+tier%4)+1}):\n    print("*" * i)`,'Multiply a string by the row number.','Patterns']
-  ];
-  let [prompt,target,hint,topic]=templates[(local+Math.floor(id/10))%templates.length];
-  if(tier>=3&&local%10===0){prompt=`Print the squares of ${n}, ${n+1}, and ${n+2}, one per line.`;target=`for x in range(${n}, ${n+3}):\n    print(x ** 2)`;hint='Loop across the values and use ** for powers.';topic='Powers';}
-  if(tier>=4&&local%10===1){prompt=`Create a function named is_even that returns True for even numbers. Print is_even(${n}).`;target=`def is_even(x):\n    return x % 2 == 0\nprint(is_even(${n}))`;hint='Return the result of a remainder check.';topic='Boolean functions';}
-  if(tier>=5&&local%10===2){prompt=`From [${n}, ${n+3}, ${n-1}, ${n+5}], print the largest value.`;target=`print(max([${n}, ${n+3}, ${n-1}, ${n+5}]))`;hint='max() finds the largest list item.';topic='List analysis';}
-  if(tier>=6&&local%10===3){prompt=`Use a comprehension to print the cubes of 1 through ${Math.min(7,2+tier%6)}.`;target=`print([x ** 3 for x in range(1, ${Math.min(7,2+tier%6)+1})])`;hint='Put the expression before the for clause.';topic='Comprehensions';}
-  if(tier>=7&&local%10===4){prompt=`Print the unique sorted values in [${n}, ${n+2}, ${n}, ${n-1}].`;target=`print(sorted(set([${n}, ${n+2}, ${n}, ${n-1}])))`;hint='Convert to a set, then sort it.';topic='Sets and sorting';}
-  if(tier>=8&&local%10===5){prompt=`Write a recursive factorial function and print factorial(${Math.min(6,2+tier%5)}).`;const f=Math.min(6,2+tier%5);target=`def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)\nprint(factorial(${f}))`;hint='The base case stops the recursion.';topic='Recursion';}
-  if(tier>=9&&local%10===6){prompt=`Count the frequency of each character in "${word}" and print the dictionary.`;target=`counts = {}\nfor char in "${word}":\n    counts[char] = counts.get(char, 0) + 1\nprint(counts)`;hint='Use dict.get with a zero default.';topic='Frequency maps';}
-  if(tier>=10&&local%10===7){prompt=`Build a ${Math.min(5,3+tier%3)}-row number triangle. Row n contains numbers 1 through n.`;const rows=Math.min(5,3+tier%3);target=`for row in range(1, ${rows+1}):\n    print(" ".join(str(n) for n in range(1, row + 1)))`;hint='Nest a join over a range inside the row loop.';topic='Nested patterns';}
-  const lines=target.split('\n').length;
-  if(lines>20)throw new Error(`Level ${id} exceeds the 20 line limit`);
-  const episode=Math.ceil(id/20);
-  return{id,world:`EPISODE ${String(episode).padStart(2,'0')} · ${episodeNames[(episode-1)%episodeNames.length]}`,title:`${topic}: trace ${String(id).padStart(3,'0')}`,prompt,hint,starter:'',target,xp:10+tier*2};
-}
 export const episodePalette=palette;
 const worldOf=(id:number)=>{const e=Math.ceil(id/20);return `EPISODE ${String(e).padStart(2,'0')} · ${episodeNames[e-1]}`};
-export const questions:Question[]=[...openingQuestions,...Array.from({length:980},(_,i)=>makeQuestion(i+21))].map(q=>({...q,world:worldOf(q.id)}));
-
-
-
+// Levels 21–1000 come from the puzzle library in puzzles.ts (deterministic, every prompt unique).
+const generated:Question[]=buildLevels(21,1000,new Set(openingQuestions.map(q=>q.prompt))).map(l=>({id:l.id,world:'',title:titleFor(l.id-21),prompt:l.prompt,hint:l.hint,starter:l.starter??'',target:l.target,test:l.test,xp:10+l.tier*2,topic:l.topic}));
+export const questions:Question[]=[...openingQuestions,...generated].map(q=>({...q,world:worldOf(q.id)}));

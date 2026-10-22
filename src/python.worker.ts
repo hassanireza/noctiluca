@@ -1,4 +1,4 @@
-import { loadPyodide } from 'pyodide';
+import { loadPyodide } from 'https://cdn.jsdelivr.net/pyodide/v0.29.5/full/pyodide.mjs';
 
 type RunRequest = { code: string; target: string; test?: string };
 let runtime: ReturnType<typeof loadPyodide> | null = null;
@@ -6,8 +6,10 @@ let runtime: ReturnType<typeof loadPyodide> | null = null;
 self.onmessage = async (event: MessageEvent<RunRequest>) => {
   const { code, target, test = '' } = event.data;
   try {
-    runtime ??= loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.29.5/full/' });
+    self.postMessage({ phase: 'loading' });
+    runtime ??= loadPyodide();
     const py = await runtime;
+    self.postMessage({ phase: 'running' });
     let output = '';
     py.setStdout({ batched: (line: string) => { output += `${line}\n`; } });
     py.setStderr({ batched: (line: string) => { output += `${line}\n`; } });

@@ -1,3 +1,4 @@
+import{episodeNames}from'./episodes';
 export type Question={id:number;world:string;title:string;prompt:string;hint:string;starter:string;target:string;test?:string;xp:number};
 const openingQuestions:Question[]=[
 {id:1,world:'I · FIRST LIGHT',title:'A small signal',prompt:'Print the word hello.',hint:'One built-in function is enough.',starter:'# let the light speak\n',target:'print("hello")',xp:10},
@@ -17,14 +18,13 @@ const openingQuestions:Question[]=[
 {id:15,world:'III · UMBRA',title:'The quiet total',prompt:'Print the sum of [3, 5, 8].',hint:'Python has a built-in for this.',starter:'',target:'print(sum([3, 5, 8]))',xp:18},
 {id:16,world:'IV · ECLIPSE',title:'Fibonacci spark',prompt:'Print the first six Fibonacci numbers, starting with 0 and 1.',hint:'Keep two values and update them each loop.',starter:'',target:'a, b = 0, 1\nfor _ in range(6):\n    print(a)\n    a, b = b, a + b',xp:22},
 {id:17,world:'IV · ECLIPSE',title:'Palindrome gate',prompt:'Print True if "level" reads the same backwards.',hint:'Compare a string with its reversed slice.',starter:'',target:'word = "level"\nprint(word == word[::-1])',xp:22},
-{id:18,world:'IV · ECLIPSE',title:'Unique orbit',prompt:'Print the unique values from [2, 2, 5, 2, 8].',hint:'A set keeps each value once.',starter:'',target:'print(set([2, 2, 5, 2, 8]))',xp:22},
+{id:18,world:'IV · ECLIPSE',title:'Unique orbit',prompt:'Print the unique values from [2, 2, 5, 2, 8] as a sorted list.',hint:'A set keeps each value once; sorted() returns a list.',starter:'',target:'print(sorted(set([2, 2, 5, 2, 8])))',xp:22},
 {id:19,world:'IV · ECLIPSE',title:'Prime signal',prompt:'Print True if 17 is prime.',hint:'Try divisors from 2 up to the square root.',starter:'',target:'n = 17\nprint(all(n % i for i in range(2, int(n ** 0.5) + 1)))',xp:24},
 {id:20,world:'V · AFTERGLOW',title:'The final pattern',prompt:'Print a centered pyramid of stars with 4 rows.',hint:'Each row needs leading spaces and an odd number of stars.',starter:'',target:'for i in range(4):\n    print(" " * (3 - i) + "*" * (2 * i + 1))',xp:28}
 ];
 
-const episodeNames=['FIRST LIGHT','ORBIT','UMBRA','ECLIPSE','AFTERGLOW','GRAVE GARDEN','GLASS TIDE','BLACK COMET','HOLLOW STAR','NIGHT ENGINE'];
 const words=['raven','velvet','cipher','nebula','shadow','signal','winter','silver','lumen','midnight'];
-const palette=['#a8c8bb','#a7b9cd','#b6a8c8','#c6a7a7','#c7b68e','#91b6b4','#c49cae','#99a9c8','#b4a9a0','#a8bd91'];
+const palette=['#6fe3f2','#8fb4ff','#b79cff','#ff9ec2','#ffcf86','#7df0c6','#f08fe0','#7fd0ff','#ffb48a','#b6ee86'];
 function makeQuestion(id:number):Question{
   const tier=Math.min(10,Math.ceil(id/100));
   const local=id%100;
@@ -44,7 +44,7 @@ function makeQuestion(id:number):Question{
   ];
   let [prompt,target,hint,topic]=templates[(local+Math.floor(id/10))%templates.length];
   if(tier>=3&&local%10===0){prompt=`Print the squares of ${n}, ${n+1}, and ${n+2}, one per line.`;target=`for x in range(${n}, ${n+3}):\n    print(x ** 2)`;hint='Loop across the values and use ** for powers.';topic='Powers';}
-  if(tier>=4&&local%10===1){prompt=`Create a function named is_even that prints True for ${n} if it is even.`;target=`def is_even(x):\n    return x % 2 == 0\nprint(is_even(${n}))`;hint='Return the result of a remainder check.';topic='Boolean functions';}
+  if(tier>=4&&local%10===1){prompt=`Create a function named is_even that returns True for even numbers. Print is_even(${n}).`;target=`def is_even(x):\n    return x % 2 == 0\nprint(is_even(${n}))`;hint='Return the result of a remainder check.';topic='Boolean functions';}
   if(tier>=5&&local%10===2){prompt=`From [${n}, ${n+3}, ${n-1}, ${n+5}], print the largest value.`;target=`print(max([${n}, ${n+3}, ${n-1}, ${n+5}]))`;hint='max() finds the largest list item.';topic='List analysis';}
   if(tier>=6&&local%10===3){prompt=`Use a comprehension to print the cubes of 1 through ${Math.min(7,2+tier%6)}.`;target=`print([x ** 3 for x in range(1, ${Math.min(7,2+tier%6)+1})])`;hint='Put the expression before the for clause.';topic='Comprehensions';}
   if(tier>=7&&local%10===4){prompt=`Print the unique sorted values in [${n}, ${n+2}, ${n}, ${n-1}].`;target=`print(sorted(set([${n}, ${n+2}, ${n}, ${n-1}])))`;hint='Convert to a set, then sort it.';topic='Sets and sorting';}
@@ -57,7 +57,8 @@ function makeQuestion(id:number):Question{
   return{id,world:`EPISODE ${String(episode).padStart(2,'0')} · ${episodeNames[(episode-1)%episodeNames.length]}`,title:`${topic}: trace ${String(id).padStart(3,'0')}`,prompt,hint,starter:'',target,xp:10+tier*2};
 }
 export const episodePalette=palette;
-export const questions:Question[]=[...openingQuestions,...Array.from({length:980},(_,i)=>makeQuestion(i+21))];
+const worldOf=(id:number)=>{const e=Math.ceil(id/20);return `EPISODE ${String(e).padStart(2,'0')} · ${episodeNames[e-1]}`};
+export const questions:Question[]=[...openingQuestions,...Array.from({length:980},(_,i)=>makeQuestion(i+21))].map(q=>({...q,world:worldOf(q.id)}));
 
 
 

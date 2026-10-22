@@ -25,6 +25,9 @@ const ink = syntaxHighlighting(HighlightStyle.define([
   { tag: t.self, color: '#ff9ec2' },
 ]));
 
+const PAIRS: Record<string, string> = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'" };
+const CLOSERS = [')', ']', '}'];
+
 export type EditorHandle = { insert: (text: string) => void; undo: () => void; blur: () => void };
 
 /** CodeMirror configured for phones: no autocapitalise / autocorrect / smart quotes, 4-space indent, brand theme. */
@@ -34,7 +37,17 @@ export const CodeEditor = forwardRef<EditorHandle, { value: string; onChange: (v
     insert(text) {
       const v = view.current; if (!v) return;
       const { from, to } = v.state.selection.main;
-      v.dispatch({ changes: { from, to, insert: text }, selection: { anchor: from + text.length }, scrollIntoView: true, userEvent: 'input.type' });
+      const next = v.state.doc.sliceString(to, to + 1);
+      // Match the keyboard behaviour: pairs auto-close, and typing a closer over the same closer just steps past it.
+      if (from === to && CLOSERS.includes(text) && next === text && text !== '"' && text !== "'") {
+        v.dispatch({ selection: { anchor: to + 1 }, scrollIntoView: true });
+      } else if (from === to && PAIRS[text] && !((text === '"' || text === "'") && next === text)) {
+        v.dispatch({ changes: { from, insert: text + PAIRS[text] }, selection: { anchor: from + 1 }, scrollIntoView: true, userEvent: 'input.type' });
+      } else if (from === to && next === text && (text === '"' || text === "'")) {
+        v.dispatch({ selection: { anchor: to + 1 }, scrollIntoView: true });
+      } else {
+        v.dispatch({ changes: { from, to, insert: text }, selection: { anchor: from + text.length }, scrollIntoView: true, userEvent: 'input.type' });
+      }
       v.focus();
     },
     undo() { const v = view.current; if (v) { undo(v); v.focus(); } },
@@ -53,7 +66,7 @@ export const CodeEditor = forwardRef<EditorHandle, { value: string; onChange: (v
         python(), night, ink, indentUnit.of('    '),
         EditorView.contentAttributes.of({ autocapitalize: 'off', autocorrect: 'off', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Python code editor', enterkeyhint: 'enter' }),
       ]}
-      basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, autocompletion: false, closeBrackets: false, searchKeymap: false }}
+      basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, autocompletion: false, closeBrackets: true, searchKeymap: false }}
     />
   );
 });

@@ -11,7 +11,7 @@ export const questions:Question[]=[
 {id:9,world:'II · ORBIT',title:'The hidden length',prompt:'Print the number of letters in "noctiluca".',hint:'len() measures a string.',starter:'',target:'print(len("noctiluca"))',xp:14},
 {id:10,world:'II · ORBIT',title:'Reverse constellation',prompt:'Print "python" backwards.',hint:'A slice can walk backwards with ::-1.',starter:'',target:'print("python"[::-1])',xp:16},
 {id:11,world:'III · UMBRA',title:'The threshold',prompt:'Print "open" if 7 is greater than 4.',hint:'A one-line if can follow the value.',starter:'',target:'if 7 > 4:\n    print("open")',xp:16},
-{id:12,world:'III · UMBRA',title:'Smallest star',prompt:'Create a function called double that returns its input multiplied by 2.',hint:'Use def and return.',starter:'',target:'def double(n):\n    return n * 2',xp:18},
+{id:12,world:'III · UMBRA',title:'Smallest star',prompt:'Create a function called double that returns its input multiplied by 2.',hint:'Use def and return.',starter:'',target:'def double(n):\n    return n * 2',test:'print(double(6))',xp:18},
 {id:13,world:'III · UMBRA',title:'A list of lights',prompt:'Print each color in ["red", "blue", "violet"] on its own line.',hint:'Loop over the list directly.',starter:'',target:'for color in ["red", "blue", "violet"]:\n    print(color)',xp:18},
 {id:14,world:'III · UMBRA',title:'Count the vowels',prompt:'Print how many times "a" appears in "aurora".',hint:'Strings have a count method.',starter:'',target:'print("aurora".count("a"))',xp:18},
 {id:15,world:'III · UMBRA',title:'The quiet total',prompt:'Print the sum of [3, 5, 8].',hint:'Python has a built-in for this.',starter:'',target:'print(sum([3, 5, 8]))',xp:18},
@@ -21,3 +21,5 @@ export const questions:Question[]=[
 {id:19,world:'IV · ECLIPSE',title:'Prime signal',prompt:'Print True if 17 is prime.',hint:'Try divisors from 2 up to the square root.',starter:'',target:'n = 17\nprint(all(n % i for i in range(2, int(n ** 0.5) + 1)))',xp:24},
 {id:20,world:'V · AFTERGLOW',title:'The final pattern',prompt:'Print a centered pyramid of stars with 4 rows.',hint:'Each row needs leading spaces and an odd number of stars.',starter:'',target:'for i in range(4):\n    print(" " * (3 - i) + "*" * (2 * i + 1))',xp:28}
 ];
+
+

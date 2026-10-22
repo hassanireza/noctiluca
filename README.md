@@ -19,7 +19,7 @@ Create `hassanireza/noctiluca` on GitHub, put these files on its `main` branch, 
 
 ## Game design
 
-Twenty short traces rise from literal output through loops, strings, functions, collections, and small algorithms. Players see one next challenge at a time, can retry freely, and keep unlocked progress and essence in local storage. Difficulty steps are grouped into five worlds; each completed trace unlocks the next. This uses clear next actions, low-cost retries, visible mastery, and short sessions rather than punitive lives or streak loss.
+The game has 1,000 levels arranged into 50 episodes of 20. The map lists recent episodes first and places level 001 at the bottom. Players may open any level at any time. The start action always returns to level 001, and map entry scrolls to the bottom so the first level and start action are immediately available. The generated challenge sequence introduces output, arithmetic, strings, loops, functions, collections, comprehensions, and algorithmic patterns over ten difficulty tiers. Solutions are kept to 20 lines or fewer. Progress and essence are saved in local storage.
 
 ## Mobile editor
 
@@ -27,7 +27,7 @@ The editor uses CodeMirror 6 with Python language support, line numbers, a dedic
 
 ## Python execution
 
-Pyodide runs CPython compiled to WebAssembly in the browser. User code is not sent to a server. The initial runner loads Pyodide on demand and displays stdout or runtime errors. Challenges use a strict normalized source comparison to award completion, so alternative correct programs can run and show output but do not yet receive completion credit. Add test-based validators to `src/questions.ts` before publishing broader challenge packs.
+Pyodide runs CPython compiled to WebAssembly in a browser worker. User code is not sent to a server. Challenge completion compares the learner program's output to the authored solution's output, with an extra probe for function challenges. Add a test probe to `src/questions.ts` when authoring a function challenge.
 
 ## Install on iPhone
 
@@ -35,7 +35,7 @@ Open the deployed site in Safari, tap **Share**, then **Add to Home Screen**. iO
 
 ## Update questions
 
-Add entries to `src/questions.ts`. Keep `id` sequential and set `world`, concise prompt, hint, starter, target solution, and essence reward. The first 20 prompts are deliberately brief for phone-sized sessions.
+The first 20 questions are authored examples. The remaining 980 are produced by `makeQuestion()` in `src/questions.ts`. Edit its tiered templates to expand or tune the sequence. Keep solutions at 20 lines or fewer and provide a concise prompt and hint. Episode group names, colors, and map presentation are in `src/App.tsx` and `src/questions.ts`.
 
 ## Credits and reference
 

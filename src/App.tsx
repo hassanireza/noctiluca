@@ -1,17 +1,85 @@
-import{useEffect,useRef,useState}from'react';import CodeMirror from'@uiw/react-codemirror';import{python}from'@codemirror/lang-python';import{oneDark}from'@codemirror/theme-one-dark';import{Check,ChevronLeft,ChevronRight,Code2,Command,Flame,HelpCircle,Lock,Play,RotateCcw,Sparkles,Terminal,X}from'lucide-react';import{questions}from'./questions';
-type Progress={done:number[];streak:number;lastDay:string;xp:number};const KEY='noctiluca.save.v1';let pythonWorker:Worker|null=null;const today=()=>new Date().toISOString().slice(0,10);function read():Progress{try{return JSON.parse(localStorage.getItem(KEY)||'')}catch{return{done:[],streak:0,lastDay:'',xp:0}}}function canonical(s:string){return s.replace(/\r/g,'').split('\n').map(x=>x.trimEnd()).join('\n').trim()}
-export default function App(){const[progress,setProgress]=useState<Progress>(read);const[active,setActive]=useState<number|null>(null);const[code,setCode]=useState('');const[output,setOutput]=useState('');const[error,setError]=useState('');const[checking,setChecking]=useState(false);const[showHint,setShowHint]=useState(false);const[install,setInstall]=useState(false);const[installPrompt,setInstallPrompt]=useState<any>(null);const editor=useRef<HTMLDivElement>(null);const q=active===null?null:questions[active];const unlocked=Math.min(questions.length,progress.done.length+1);const next=questions[Math.min(progress.done.length,19)];
-useEffect(()=>{localStorage.setItem(KEY,JSON.stringify(progress))},[progress]);useEffect(()=>{const handler=(e:any)=>{e.preventDefault();setInstallPrompt(e);setInstall(true)};window.addEventListener('beforeinstallprompt',handler);return()=>window.removeEventListener('beforeinstallprompt',handler)},[]);useEffect(()=>{if(q){setCode(q.starter);setOutput('');setError('');setShowHint(false);window.scrollTo({top:0,behavior:'smooth'})}},[active]);
-async function run(){if(!q)return;setChecking(true);setError('');setOutput('Loading Python runtime. First launch can take a little while…');pythonWorker??=new Worker(new URL('./python.worker.ts',import.meta.url),{type:'module'});const worker=pythonWorker;const timeout=window.setTimeout(()=>{worker.terminate();pythonWorker=null;setError('Python did not finish loading. Check your connection and tap Run again.');setOutput('');setChecking(false)},120000);worker.onmessage=(event:MessageEvent<{phase?:string;output?:string;error?:string;solved?:boolean}>)=>{if(event.data.phase){setOutput(event.data.phase==='loading'?'Downloading Python runtime…':'Running your code…');return}window.clearTimeout(timeout);setChecking(false);if(event.data.error){setError(event.data.error);setOutput('');return}setError('');setOutput(event.data.output||'');if(event.data.solved)setProgress(p=>{if(p.done.includes(q.id))return p;const day=today();const diff=p.lastDay?Math.floor((Date.parse(day)-Date.parse(p.lastDay))/86400000):999;return{done:[...p.done,q.id],streak:diff===1?p.streak+1:diff===0?p.streak:1,lastDay:day,xp:p.xp+q.xp}})};worker.onerror=()=>{window.clearTimeout(timeout);worker.terminate();pythonWorker=null;setChecking(false);setError('Python could not start. Check your connection and tap Run again.');setOutput('')};worker.postMessage({code,target:q.target,test:q.test})}
-function insert(text:string){const view=(editor.current?.querySelector('.cm-content') as HTMLElement|null);if(!view)return;view.focus();document.execCommand('insertText',false,text)}function openQuestion(id:number){if(id>=1&&id<=unlocked){setActive(id-1)}}async function installApp(){if(installPrompt){await installPrompt.prompt();setInstallPrompt(null)}setInstall(false)}function reset(){if(q)setCode(q.starter)}
-return <main className="shell"><header className="topbar"><button className="brand" onClick={()=>setActive(null)} aria-label="Noctiluca home"><span className="brand-mark"><i/><i/><i/></span><span>NOCTILUCA</span></button><div className="top-stats"><span><Flame size={15}/>{progress.streak}<small>DAY STREAK</small></span><span><Sparkles size={15}/>{progress.xp}<small>ESSENCE</small></span></div></header>
-{q?<section className="play"><button className="back" onClick={()=>setActive(null)}><ChevronLeft size={16}/> MAP</button><div className="question-head"><div className="eyebrow">{q.world} <span>·</span> TRACE {String(q.id).padStart(2,'0')}</div><h1>{q.title}</h1><p>{q.prompt}</p></div><div className="editor-card"><div className="editor-top"><span><Code2 size={14}/> main.py</span><button onClick={reset} aria-label="Reset code"><RotateCcw size={14}/></button></div><div ref={editor} className="editor"><CodeMirror value={code} height="205px" extensions={[python()]} theme={oneDark} onChange={setCode} basicSetup={{lineNumbers:true,foldGutter:false,highlightActiveLine:false,autocompletion:false}}/></div><div className="mobile-keys"><button onMouseDown={e=>e.preventDefault()} onClick={()=>insert('    ')}>↳ <small>INDENT</small></button>{['=','(',')',':','"','\'','[',']'].map(k=><button key={k} onMouseDown={e=>e.preventDefault()} onClick={()=>insert(k)}>{k}</button>)}</div><div className="editor-actions"><button className="hint-btn" onClick={()=>setShowHint(!showHint)}><HelpCircle size={15}/> {showHint?'HIDE HINT':'HINT'}</button><button className="run-btn" onClick={run} disabled={checking}><Play size={14} fill="currentColor"/>{checking?'STARTING PYTHON':'RUN CODE'}<span>⌘ ↵</span></button></div>{showHint&&<div className="hint">{q.hint}</div>}</div><div className="output-card"><div className="output-label"><Terminal size={14}/> OUTPUT <span>{checking?'STARTING PYTHON':error?'ERROR':output?'READY':'AWAITING EXECUTION'}</span></div><pre className={error?'error':''}>{error||output||'Your result will appear here.'}</pre></div>{progress.done.includes(q.id)?<button className="continue-btn" onClick={()=>setActive(q.id<20?q.id:null)}>{q.id===20?'RETURN TO MAP':'NEXT TRACE'}<ChevronRight size={16}/></button>:<div className="goal-note">Run the correct solution to illuminate this trace <span>+{q.xp} essence</span></div>}</section>:<><section className="hero"><div className="hero-copy"><div className="eyebrow">A POCKET-SIZED PYTHON ODYSSEY</div><h1>Find your way<br/><em>through the dark.</em></h1><p>Small programs. Strange worlds. One line at a time.</p><div className="hero-meta"><span>{progress.done.length} / 20 TRACES LIT</span><span className="dot"/><span>{progress.xp} ESSENCE</span></div></div><div className="moon-art"><div className="orbit orbit-a"/><div className="orbit orbit-b"/><div className="moon"/><div className="star s1"/><div className="star s2"/><div className="star s3"/></div></section><section className="journey"><button className="start-card" onClick={()=>openQuestion(unlocked)}><span className="resume-icon"><Play size={16} fill="currentColor"/></span><span><small>{progress.done.length===0?"YOUR FIRST TRACE":"CONTINUE YOUR JOURNEY"}</small><b>{next.title}</b></span><span className="start-label">{progress.done.length===0?"BEGIN":"CONTINUE"}</span></button><div className="section-title"><div><div className="eyebrow">THE PATH BELOW</div><h2>Choose a trace</h2></div><div className="progress-count">{progress.done.length}<span> / 20</span></div></div><div className="map-wrap"><svg className="path-lines" viewBox="0 0 400 1340" preserveAspectRatio="none"><path d="M200 35 C200 80 300 90 300 140 S100 195 100 250 S300 300 300 360 S100 420 100 470 S300 530 300 580 S100 640 100 690 S300 750 300 800 S100 860 100 910 S300 970 300 1020 S100 1080 100 1130 S200 1200 200 1290"/></svg>{questions.map((item,i)=>{const complete=progress.done.includes(item.id);const locked=item.id>unlocked;const offset=i===0?0:i%2===1?100:-100;return <button key={item.id} className={`node-row ${i%2?'right':''}`} style={{'--offset':`${offset}px`} as React.CSSProperties} disabled={locked} onClick={()=>openQuestion(item.id)}><span className={`node ${complete?'complete':''} ${locked?'locked':''} ${item.id===unlocked?'current':''}`}>{locked?<Lock size={16}/>:complete?<Check size={17}/>:<span>{String(item.id).padStart(2,'0')}</span>}</span><span className="node-copy"><small>{item.world}</small><b>{item.title}</b></span>{item.id===unlocked&&<span className="current-tag">BEGIN</span>}</button>})}</div><button className="resume" onClick={()=>openQuestion(unlocked)}><span className="resume-icon"><Command size={17}/></span><span><small>YOUR NEXT TRACE</small><b>{next.title}</b></span><ChevronRight size={18}/></button></section><footer className="footer">NOCTILUCA <span>·</span> MADE OF QUESTIONS AND QUIET LIGHT</footer></>}
-{install&&<button className="toast" onClick={installPrompt?installApp:()=>setInstall(false)}><span>{installPrompt?'Install Noctiluca':'On iPhone: Share, then Add to Home Screen'}</span>{installPrompt?<ChevronRight size={15}/>:<X size={15}/>}</button>}
-</main>}
+import { useEffect, useRef, useState } from 'react';
+import CodeMirror from '@uiw/react-codemirror';
+import { python } from '@codemirror/lang-python';
+import { oneDark } from '@codemirror/theme-one-dark';
+import { Check, ChevronLeft, ChevronRight, Code2, Flame, HelpCircle, Play, RotateCcw, Sparkles, Terminal, X } from 'lucide-react';
+import { episodePalette, questions } from './questions';
 
+type Progress = { done: number[]; streak: number; lastDay: string; xp: number };
+type WorkerReply = { phase?: string; output?: string; error?: string; solved?: boolean };
+const KEY = 'noctiluca.save.v1';
+let pythonWorker: Worker | null = null;
+const today = () => new Date().toISOString().slice(0, 10);
+function readProgress(): Progress {
+  try {
+    const stored = JSON.parse(localStorage.getItem(KEY) || '{}');
+    return { done: Array.isArray(stored.done) ? stored.done : [], streak: stored.streak || 0, lastDay: stored.lastDay || '', xp: stored.xp || 0 };
+  } catch { return { done: [], streak: 0, lastDay: '', xp: 0 }; }
+}
 
+export default function App() {
+  const [progress, setProgress] = useState<Progress>(readProgress);
+  const [active, setActive] = useState<number | null>(null);
+  const [code, setCode] = useState('');
+  const [output, setOutput] = useState('');
+  const [error, setError] = useState('');
+  const [checking, setChecking] = useState(false);
+  const [showHint, setShowHint] = useState(false);
+  const [install, setInstall] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const editor = useRef<HTMLDivElement>(null);
+  const q = active === null ? null : questions[active];
+  const firstQuestion = questions[0];
+  const groups = Array.from({ length: 50 }, (_, i) => questions.slice(i * 20, (i + 1) * 20)).reverse();
 
+  useEffect(() => { localStorage.setItem(KEY, JSON.stringify(progress)); }, [progress]);
+  useEffect(() => {
+    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); setInstall(true); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+  useEffect(() => {
+    if (q) { setCode(q.starter); setOutput(''); setError(''); setShowHint(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    else requestAnimationFrame(() => window.scrollTo(0, document.body.scrollHeight));
+  }, [active]);
 
+  function openQuestion(id: number) { if (id >= 1 && id <= questions.length) setActive(id - 1); }
+  function run() {
+    if (!q) return;
+    setChecking(true); setError(''); setOutput('Loading Python runtime. First launch can take a little while…');
+    pythonWorker ??= new Worker(new URL('./python.worker.ts', import.meta.url), { type: 'module' });
+    const worker = pythonWorker;
+    const timeout = window.setTimeout(() => { worker.terminate(); pythonWorker = null; setError('Python did not finish loading. Check your connection and tap Run again.'); setOutput(''); setChecking(false); }, 120000);
+    worker.onmessage = (event: MessageEvent<WorkerReply>) => {
+      if (event.data.phase) { setOutput(event.data.phase === 'loading' ? 'Downloading Python runtime…' : 'Running your code…'); return; }
+      window.clearTimeout(timeout); setChecking(false);
+      if (event.data.error) { setError(event.data.error); setOutput(''); return; }
+      setError(''); setOutput(event.data.output || '');
+      if (event.data.solved) setProgress(p => {
+        if (p.done.includes(q.id)) return p;
+        const day = today(); const diff = p.lastDay ? Math.floor((Date.parse(day) - Date.parse(p.lastDay)) / 86400000) : 999;
+        return { done: [...p.done, q.id], streak: diff === 1 ? p.streak + 1 : diff === 0 ? p.streak : 1, lastDay: day, xp: p.xp + q.xp };
+      });
+    };
+    worker.onerror = () => { window.clearTimeout(timeout); worker.terminate(); pythonWorker = null; setChecking(false); setError('Python could not start. Check your connection and tap Run again.'); setOutput(''); };
+    worker.postMessage({ code, target: q.target, test: q.test });
+  }
+  function insert(text: string) { const view = editor.current?.querySelector('.cm-content') as HTMLElement | null; if (view) { view.focus(); document.execCommand('insertText', false, text); } }
+  function reset() { if (q) setCode(q.starter); }
+  async function installApp() { if (installPrompt) { await installPrompt.prompt(); setInstallPrompt(null); } setInstall(false); }
 
+  return <main className="shell" data-view={q ? 'challenge' : 'map'}>
+    <header className="topbar"><button className="brand" onClick={() => setActive(null)} aria-label="Noctiluca home"><span className="brand-mark"><i/><i/><i/></span><span>NOCTILUCA</span></button><div className="top-stats"><span><Flame size={15}/>{progress.streak}<small>DAY STREAK</small></span><span><Sparkles size={15}/>{progress.xp}<small>ESSENCE</small></span></div></header>
+    {q ? <section className="play"><button className="back" onClick={() => setActive(null)}><ChevronLeft size={16}/> MAP</button><div className="question-head"><div className="eyebrow">{q.world} <span>·</span> LEVEL {String(q.id).padStart(3, '0')} / 1000</div><h1>{q.title}</h1><p>{q.prompt}</p><div className="line-limit">SOLUTION LIMIT · 20 LINES</div></div><div className="editor-card"><div className="editor-top"><span><Code2 size={14}/> main.py</span><button onClick={reset} aria-label="Reset code"><RotateCcw size={14}/></button></div><div ref={editor} className="editor"><CodeMirror value={code} height="205px" extensions={[python()]} theme={oneDark} onChange={setCode} basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false, autocompletion: false }}/></div><div className="mobile-keys"><button onMouseDown={e => e.preventDefault()} onClick={() => insert('    ')}>↳ <small>INDENT</small></button>{['=', '(', ')', ':', '"', '\'', '[', ']'].map(k => <button key={k} onMouseDown={e => e.preventDefault()} onClick={() => insert(k)}>{k}</button>)}</div><div className="editor-actions"><button className="hint-btn" onClick={() => setShowHint(!showHint)}><HelpCircle size={15}/> {showHint ? 'HIDE HINT' : 'HINT'}</button><button className="run-btn" onClick={run} disabled={checking}><Play size={14} fill="currentColor"/>{checking ? 'STARTING PYTHON' : 'RUN CODE'}</button></div>{showHint && <div className="hint">{q.hint}</div>}</div><div className="output-card"><div className="output-label"><Terminal size={14}/> OUTPUT <span>{checking ? 'STARTING PYTHON' : error ? 'ERROR' : output ? 'READY' : 'AWAITING EXECUTION'}</span></div><pre className={error ? 'error' : ''}>{error || output || 'Your result will appear here.'}</pre></div>{progress.done.includes(q.id) ? <button className="continue-btn" onClick={() => q.id === questions.length ? setActive(null) : openQuestion(q.id + 1)}>{q.id === questions.length ? 'RETURN TO MAP' : 'NEXT LEVEL'}<ChevronRight size={16}/></button> : <div className="goal-note">Run a solution that produces the expected result <span>+{q.xp} essence</span></div>}</section> : <>
+      <section className="hero"><div className="hero-copy"><div className="eyebrow">A 1000-LEVEL PYTHON ODYSSEY</div><h1>Find your way<br/><em>through the dark.</em></h1><p>Fifty episodes. A thousand small programs. Your path is yours to choose.</p><div className="hero-meta"><span>{progress.done.length} / 1000 TRACES LIT</span><span className="dot"/><span>{progress.xp} ESSENCE</span></div></div><div className="moon-art"><div className="orbit orbit-a"/><div className="orbit orbit-b"/><div className="moon"/><div className="star s1"/><div className="star s2"/><div className="star s3"/></div></section>
+      <section className="journey"><div className="section-title"><div><div className="eyebrow">THE PATH BELOW</div><h2>50 episodes · 1000 levels</h2></div><div className="progress-count">{progress.done.length}<span> / 1000</span></div></div>
+        <div className="episode-list">{groups.map((group, gi) => { const episode = 50 - gi; const tint = episodePalette[(episode - 1) % episodePalette.length]; return <article className="episode-block" key={episode} style={{ '--episode-color': tint } as React.CSSProperties}><header className="episode-heading"><span className="episode-number">EPISODE {String(episode).padStart(2, '0')}</span><h3>{episodeNames[episode - 1]}</h3><span className="episode-range">LEVELS {String(group[0].id).padStart(3, '0')} TO {String(group[group.length - 1].id).padStart(3, '0')}</span></header><div className="level-grid">{group.slice().reverse().map(item => <button key={item.id} className={`level-node ${progress.done.includes(item.id) ? 'complete' : ''}`} onClick={() => openQuestion(item.id)} aria-label={`Open level ${item.id}: ${item.title}`}><span>{String(item.id).padStart(3, '0')}</span>{progress.done.includes(item.id) && <Check size={12}/>}</button>)}</div></article>; })}</div>
+        <button className="start-card" onClick={() => openQuestion(firstQuestion.id)}><span className="resume-icon"><Play size={16} fill="currentColor"/></span><span><small>START FROM THE BEGINNING</small><b>Level 001 · {firstQuestion.title}</b></span><span className="start-label">START</span></button>
+      </section><footer className="footer">NOCTILUCA <span>·</span> FIFTY EPISODES · ONE THOUSAND TRACES</footer>
+    </>}
+    {install && <button className="toast" onClick={installPrompt ? installApp : () => setInstall(false)}><span>{installPrompt ? 'Install Noctiluca' : 'On iPhone: Share, then Add to Home Screen'}</span>{installPrompt ? <ChevronRight size={15}/> : <X size={15}/>}</button>}
+  </main>;
+}
 
+const episodeNames = ['FIRST LIGHT','ORBIT','UMBRA','ECLIPSE','AFTERGLOW','GRAVE GARDEN','GLASS TIDE','BLACK COMET','HOLLOW STAR','NIGHT ENGINE','ASHEN ARCHIVE','MOONLESS SEA','PALE CONSTELLATION','THE DEEP','SILENT SIGNAL','FROST CIRCUIT','VEIL OF STATIC','DARK MATTER','WITCHING HOUR','THE VOID','CINDER PATH','MIRROR WORLD','GHOST FREQUENCY','COLD SUN','OBSIDIAN GATE','DREAM MACHINE','THORNED SKY','DUSK ENGINE','STARLESS','THE UNDERWORLD','WOLFSBANE','DROWNED CITY','NIGHT BLOOM','IRON MOON','ECHO CHAMBER','THE LAST ORBIT','DUST TEMPLE','BLACK RAIN','SABLE GARDEN','AFTERIMAGE','THE DEEP FIELD','HOLLOW CROWN','GLOAM','NOCTURNE','THE VEILED','GRAVITY WELL','DARKLING','FINAL SIGNAL','ZERO HOUR','AFTERGLOW'];
 

@@ -1,0 +1,114 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight, ChevronLeft, Code2, Eye, Lightbulb, Play, RotateCcw, Sparkles, Terminal, Undo2 } from 'lucide-react';
+import { CodeEditor, type EditorHandle } from '../components/CodeEditor';
+import { LEVEL_COUNT } from '../episodes';
+import { questions } from '../questions';
+import { runPython, runtimeState, subscribeRuntime, warmUp, type RuntimeState } from '../python';
+
+type Verdict = { kind: 'idle' } | { kind: 'busy'; text: string } | { kind: 'ok'; fresh: boolean } | { kind: 'wrong' } | { kind: 'error'; text: string };
+type Props = { id: number; solved: boolean; onSolve: (id: number, xp: number) => void; onOpen: (id: number) => void; onBack: () => void };
+
+const KEYS = ['=', '(', ')', ':', '"', "'", '[', ']', '{', '}', ',', '.', '+', '-', '*', '/', '%', '#', '<', '>', '_'];
+
+export function PlayScreen({ id, solved, onSolve, onOpen, onBack }: Props) {
+  const q = questions[id - 1];
+  const [code, setCode] = useState(q.starter);
+  const [output, setOutput] = useState('');
+  const [expected, setExpected] = useState('');
+  const [verdict, setVerdict] = useState<Verdict>({ kind: 'idle' });
+  const [attempts, setAttempts] = useState(0);
+  const [hint, setHint] = useState(false);
+  const [reveal, setReveal] = useState(false);
+  const [rt, setRt] = useState<RuntimeState>(runtimeState());
+  const editor = useRef<EditorHandle>(null);
+  const outRef = useRef<HTMLDivElement>(null);
+  const runToken = useRef(0);
+  const busy = verdict.kind === 'busy';
+  const lines = useMemo(() => (code.trim() ? code.replace(/\s+$/, '').split('\n').length : 0), [code]);
+
+  useEffect(() => subscribeRuntime(setRt), []);
+  useEffect(() => { warmUp(); }, []);
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  useEffect(() => () => { runToken.current++; }, []);
+
+  async function run() {
+    if (busy) return;
+    editor.current?.blur();
+    const token = ++runToken.current;
+    setReveal(false);
+    setVerdict({ kind: 'busy', text: rt === 'ready' ? 'Running your code…' : 'Waking Python up. First launch downloads the runtime…' });
+    requestAnimationFrame(() => outRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    try {
+      const r = await runPython({ code, target: q.target, test: q.test });
+      if (token !== runToken.current) return;
+      setOutput(r.actual || (q.test ? 'Your function is defined.' : 'Program finished with no output.'));
+      setExpected(r.expected);
+      if (r.solved) { setVerdict({ kind: 'ok', fresh: !solved }); onSolve(q.id, q.xp); navigator.vibrate?.(24); }
+      else { setVerdict({ kind: 'wrong' }); setAttempts((a) => a + 1); }
+    } catch (e) {
+      if (token !== runToken.current) return;
+      const m = (e as Error).message;
+      const text = m === 'TIMEOUT_RUN' ? 'That ran for too long. Check for a loop that never ends.'
+        : m === 'TIMEOUT_LOAD' || m === 'START_FAILED' ? 'Python could not load. Check your connection and tap Run again.' : m;
+      setOutput(''); setVerdict({ kind: 'error', text });
+    }
+  }
+
+  const status = verdict.kind === 'busy' ? 'RUNNING' : verdict.kind === 'error' ? 'ERROR' : verdict.kind === 'ok' ? 'MATCHED' : verdict.kind === 'wrong' ? 'NO MATCH' : 'AWAITING';
+  const isDone = solved || verdict.kind === 'ok';
+  const last = q.id === LEVEL_COUNT;
+
+  return (
+    <div className="play">
+      <div className="play-bar">
+        <button className="back" onClick={onBack}><ChevronLeft size={18} /> MAP</button>
+        <div className="level-no">{String(q.id).padStart(3, '0')}<span> / {LEVEL_COUNT.toLocaleString()}</span></div>
+        <div className="play-bar-end" aria-hidden="true" />
+      </div>
+
+      <div className="question-head">
+        <div className="eyebrow">{q.world}</div>
+        <h1>{q.title}</h1>
+        <p>{q.prompt}</p>
+        <div className="reward"><Sparkles size={13} /> {solved ? 'Already lit' : `+${q.xp} essence`}<span>·</span>aim for 20 lines or fewer</div>
+        {hint && <div className="hint" role="note"><Lightbulb size={16} /><span>{q.hint}</span></div>}
+      </div>
+
+      <div className="card editor-card">
+        <div className="card-top">
+          <span><Code2 size={14} /> main.py</span>
+          <span className={`rt rt-${rt}`}>{rt === 'ready' ? 'PYTHON READY' : rt === 'loading' ? 'PYTHON WAKING' : 'PYTHON ASLEEP'}</span>
+          <span className="lines">{lines} {lines === 1 ? 'line' : 'lines'}</span>
+          <button className="icon-btn" onClick={() => { setCode(q.starter); }} aria-label="Reset code"><RotateCcw size={16} /></button>
+        </div>
+        <div className="editor"><CodeEditor ref={editor} value={code} onChange={setCode} /></div>
+      </div>
+
+      <div className="card output-card" ref={outRef}>
+        <div className="card-top"><span><Terminal size={14} /> OUTPUT</span><span className={`status s-${verdict.kind}`}>{status}</span></div>
+        <pre aria-live="polite" className={verdict.kind === 'error' ? 'error' : ''}>
+          {verdict.kind === 'error' ? verdict.text : verdict.kind === 'busy' ? verdict.text : output || 'Your result will appear here.'}
+        </pre>
+        {verdict.kind === 'ok' && <div className="verdict good"><div className="burst" aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <i key={i} style={{ ['--a' as string]: `${i * 45}deg` }} />)}</div><Sparkles size={18} /><div><b>{verdict.fresh ? 'Star lit!' : 'Still matches.'}</b><span>{verdict.fresh ? `+${q.xp} essence added to your light.` : 'Nice, this level was already lit.'}</span></div></div>}
+        {verdict.kind === 'wrong' && <div className="verdict bad"><div><b>Not quite yet.</b><span>The output differs from what this level expects.{attempts < 2 ? ' Try the hint, then run again.' : ''}</span></div>
+          {attempts >= 2 && !reveal && <button className="ghost" onClick={() => setReveal(true)}><Eye size={15} /> Show expected output</button>}
+          {reveal && <pre className="expected">{expected || '(no output)'}</pre>}</div>}
+      </div>
+
+      <div className="dock play-dock">
+        <div className="keys" role="toolbar" aria-label="Code symbols">
+          <button className="key wide" onPointerDown={(e) => e.preventDefault()} onClick={() => editor.current?.insert('    ')} aria-label="Indent four spaces">⇥ <small>TAB</small></button>
+          <button className="key" onPointerDown={(e) => e.preventDefault()} onClick={() => editor.current?.undo()} aria-label="Undo"><Undo2 size={16} /></button>
+          {KEYS.map((k) => <button key={k} className="key" onPointerDown={(e) => e.preventDefault()} onClick={() => editor.current?.insert(k)}>{k}</button>)}
+        </div>
+        <div className="actions">
+          <button className={`ghost hint-btn${hint ? ' on' : ''}`} onClick={() => setHint((h) => !h)} aria-pressed={hint}><Lightbulb size={17} /> Hint</button>
+          {isDone && (
+            <button className="primary" onClick={() => (last ? onBack() : onOpen(q.id + 1))}>{last ? 'Back to map' : 'Next level'} <ArrowRight size={17} /></button>
+          )}
+          <button className={isDone ? 'ghost run-btn' : 'primary run-btn'} onClick={run} disabled={busy}><Play size={15} fill="currentColor" />{busy ? 'Running' : isDone ? 'Run' : 'Run code'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}

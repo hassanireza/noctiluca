@@ -19,23 +19,19 @@ Create `hassanireza/noctiluca` on GitHub, put these files on its `main` branch, 
 
 ## Game design
 
-The game has 1,000 levels arranged into 50 episodes of 20. The map lists recent episodes first and places level 001 at the bottom. Players may open any level at any time. The start action always returns to level 001, and map entry scrolls to the bottom so the first level and start action are immediately available. The generated challenge sequence introduces output, arithmetic, strings, loops, functions, collections, comprehensions, and algorithmic patterns over ten difficulty tiers. Solutions are kept to 20 lines or fewer. Progress and essence are saved in local storage.
+1,000 levels in 50 episodes of 20. Each episode is drawn as a constellation: level 001 sits at the bottom of the page and the path climbs upward. Any level can be opened at any time. New players land on the hero; returning players land on their current episode, and a thumb-reach dock always offers **Begin / Continue** plus a **Jump to episode** sheet. Progress and essence are saved in local storage; streaks use the local calendar day and lapse after a missed day.
 
 ## Mobile editor
 
-The editor uses CodeMirror 6 with Python language support, line numbers, a dedicated four-space indent button, and a horizontal row of commonly needed symbols. The row works with touch and does not intercept typing focus. The page respects safe areas and has a compact, single-column play view.
+CodeMirror 6 with Python highlighting in the Noctiluca theme. Autocapitalise, autocorrect and smart quotes are disabled, indentation is four spaces, and a symbol row (Tab, undo and common punctuation) is docked above the keyboard using `visualViewport`, so Run is always reachable. Python starts downloading when a level opens, infinite loops are stopped after 8 seconds, and every run uses a fresh namespace. Wrong answers get a clear verdict, with the expected output offered after two attempts.
 
-## Python execution
+## Installable app (iPhone and Android)
 
-Pyodide runs CPython compiled to WebAssembly in a browser worker. User code is not sent to a server. Challenge completion compares the learner program's output to the authored solution's output, with an extra probe for function challenges. Add a test probe to `src/questions.ts` when authoring a function challenge.
-
-## Install on iPhone
-
-Open the deployed site in Safari, tap **Share**, then **Add to Home Screen**. iOS does not expose the Chromium install prompt event, so the app provides this instruction when an install prompt event is available and documents the Safari path here.
+Brand assets are generated from one vector definition: `npm run assets` rewrites `public/` icons (180px apple-touch-icon, 192/512, maskable, favicons) and 13 iPhone splash screens, and `scripts/splash-links.html` holds the matching `<link>` tags already pasted into `index.html`. The manifest and service worker are base-path relative. The service worker serves pages network-first (updates appear on next open), caches built assets, and caches the Pyodide runtime so Python works offline after the first run. On iOS the app teaches **Share, then Add to Home Screen** once (snoozed 14 days); Chromium gets the native install prompt. Safe areas are respected for the notch, status bar and home indicator.
 
 ## Update questions
 
-The first 20 questions are authored examples. The remaining 980 are produced by `makeQuestion()` in `src/questions.ts`. Edit its tiered templates to expand or tune the sequence. Keep solutions at 20 lines or fewer and provide a concise prompt and hint. Episode group names, colors, and map presentation are in `src/App.tsx` and `src/questions.ts`.
+The first 20 questions are authored examples. The remaining 980 are produced by `makeQuestion()` in `src/questions.ts`. Edit its tiered templates to expand or tune the sequence. Keep solutions at 20 lines or fewer and provide a concise prompt and hint. Episode names live in `src/episodes.ts`; colors are in `src/questions.ts`; the map is `src/screens/MapScreen.tsx`.
 
 ## Credits and reference
 

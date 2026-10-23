@@ -257,3 +257,27 @@ html.editing .accessory{display:flex;align-items:center;gap:8px;flex:none}
 .run-mini.primary{flex:none}
 .run-mini.danger{flex:none;height:44px}
 .accessory .keys{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);padding-right:18px}
+
+/* ───────── toolbar keys (tools + symbols pages) ───────── */
+.key{touch-action:pan-x}
+.key .glyph{font:500 12.5px var(--mono);letter-spacing:.02em;white-space:nowrap}
+.key.wide{min-width:64px}
+.key.accent{color:var(--glow);border-color:rgba(111,227,242,.45);background:#0e2c3d}
+.key svg{flex:none}
+
+/* ───────── find & replace panel, made for thumbs ───────── */
+.editor .cm-panels{background:#0b1a28;color:var(--text);border:0}
+.editor .cm-panels-top{border-bottom:1px solid var(--line-strong)}
+.editor .cm-search{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 44px 8px 8px;font:13px var(--sans)}
+.editor .cm-search br{display:none}
+.editor .cm-search .cm-textfield{flex:1 1 120px;min-width:0;height:38px;padding:0 10px;border-radius:10px;border:1px solid var(--line-strong);background:#06101a;color:var(--text);font:16px var(--mono);outline:none;margin:0}
+.editor .cm-search .cm-textfield:focus{border-color:var(--glow)}
+.editor .cm-search .cm-button{height:38px;padding:0 12px;border-radius:10px;border:1px solid var(--line-strong);background:#12293b;background-image:none;color:var(--text);font:600 13px var(--sans);margin:0}
+.editor .cm-search .cm-button:active{background:#17405a}
+.editor .cm-search label{display:inline-flex;align-items:center;gap:5px;min-height:34px;color:var(--muted);font-size:13px;margin:0}
+.editor .cm-search label:nth-of-type(n+2),.editor .cm-search button[name="select"]{display:none}
+.editor .cm-search input[type="checkbox"]{width:18px;height:18px;accent-color:#6fe3f2;margin:0}
+.editor .cm-search button[name="close"]{position:absolute;top:6px;right:6px;width:36px;height:36px;padding:0;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:22px;line-height:1}
+.editor .cm-searchMatch{background:rgba(255,207,134,.28);outline:1px solid rgba(255,207,134,.6)}
+.editor .cm-searchMatch-selected{background:rgba(111,227,242,.38)}
+.key.wide{gap:3px}

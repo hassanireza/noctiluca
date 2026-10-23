@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { ChevronRight, Compass, Play } from 'lucide-react';
+import { ChevronRight, Compass, Play, SquareTerminal } from 'lucide-react';
 import { Constellation } from '../components/Constellation';
 import { EpisodeSheet } from '../components/EpisodeSheet';
 import { CellArt } from '../components/CellArt';
@@ -7,10 +7,10 @@ import { EPISODE_COUNT, LEVELS_PER_EPISODE, LEVEL_COUNT, episodeNames } from '..
 import { episodePalette, questions } from '../questions';
 import { nextLevel, type Progress } from '../progress';
 
-type Props = { progress: Progress; focusLevel: number | null; onOpen: (id: number) => void };
+type Props = { progress: Progress; focusLevel: number | null; restoreY: number | null; onOpen: (id: number) => void; onTerminal: () => void };
 const episodeOf = (id: number) => Math.ceil(id / LEVELS_PER_EPISODE);
 
-export function MapScreen({ progress, focusLevel, onOpen }: Props) {
+export function MapScreen({ progress, focusLevel, restoreY, onOpen, onTerminal }: Props) {
   const [sheet, setSheet] = useState(false);
   const done = useMemo(() => new Set(progress.done), [progress.done]);
   const next = nextLevel(progress);
@@ -22,6 +22,7 @@ export function MapScreen({ progress, focusLevel, onOpen }: Props) {
   // Land where the player is. The title/hero now sits at the bottom of the path (the surface), so beginners land right on it.
   useEffect(() => {
     const target = focusLevel ?? (returning ? resume : null);
+    if (restoreY !== null) { requestAnimationFrame(() => window.scrollTo(0, restoreY)); return; }
     const toBottom = () => window.scrollTo(0, document.documentElement.scrollHeight);
     if (target === null || episodeOf(target) <= 2) { requestAnimationFrame(toBottom); return; }
     requestAnimationFrame(() => document.getElementById(`ep-${episodeOf(target)}`)?.scrollIntoView({ block: 'center' }));
@@ -60,6 +61,11 @@ export function MapScreen({ progress, focusLevel, onOpen }: Props) {
             <div className="meter-bar"><i style={{ width: `${Math.max(1.5, (progress.done.length / LEVEL_COUNT) * 100)}%` }} /></div>
             <div className="meter-text"><b>{progress.done.length}</b> / {LEVEL_COUNT.toLocaleString()} stars lit</div>
           </div>
+          <button className="sandbox-card" onClick={onTerminal}>
+            <span className="sandbox-icon"><SquareTerminal size={20} /></span>
+            <span className="sandbox-text"><b>Terminal</b><small>A free sandbox for any Python</small></span>
+            <ChevronRight size={18} />
+          </button>
         </div>
       </section>
 
@@ -67,10 +73,11 @@ export function MapScreen({ progress, focusLevel, onOpen }: Props) {
       <nav className="dock" aria-label="Quick actions">
         <button className="dock-main" onClick={() => onOpen(resume)}>
           <span className="dock-play"><Play size={16} fill="currentColor" /></span>
-          <span className="dock-text"><small>{next === null ? 'ALL STARS LIT · REPLAY' : returning ? 'CONTINUE' : 'BEGIN'}</small><b>Level {String(resume).padStart(3, '0')} · {resumeQ.title}</b></span>
+          <span className="dock-text"><small>{next === null ? 'REPLAY' : returning ? 'CONTINUE' : 'BEGIN'} · LEVEL {String(resume).padStart(3, '0')}</small><b>{resumeQ.title}</b></span>
           <ChevronRight size={18} />
         </button>
-        <button className="dock-jump" onClick={() => setSheet(true)} aria-label="Jump to episode"><Compass size={22} /></button>
+        <button className="dock-icon" onClick={() => setSheet(true)} aria-label="Jump to episode"><Compass size={22} /></button>
+        <button className="dock-icon" onClick={onTerminal} aria-label="Open terminal"><SquareTerminal size={22} /></button>
       </nav>
       {sheet && <EpisodeSheet done={done} current={episodeOf(resume)} onPick={jump} onClose={() => setSheet(false)} />}
     </>

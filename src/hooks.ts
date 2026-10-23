@@ -1,18 +1,46 @@
 import { useEffect, useState } from 'react';
 
-/** Exposes the on-screen keyboard height as --kb so fixed bars can ride above it (iOS does not resize the layout viewport). */
-export function useKeyboardInset() {
+import { useSyncExternalStore } from 'react';
+
+/* ───────── Focus mode ─────────
+   On phones the on-screen keyboard covers ~half the screen. Instead of letting fixed bars float over the editor,
+   we switch the workspace into a full-bleed "focus mode" that is sized to the *visual* viewport (the part you can
+   actually see): compact header, editor filling all remaining space, one slim toolbar glued above the keyboard. */
+let editing = false;
+const subs = new Set<() => void>();
+const setEditing = (v: boolean) => { if (v !== editing) { editing = v; subs.forEach((f) => f()); } };
+/** True while the code editor has focus on a touch phone. */
+export const useEditing = () => useSyncExternalStore((f) => { subs.add(f); return () => { subs.delete(f); }; }, () => editing);
+
+export function useViewportMode() {
   useEffect(() => {
-    const vv = window.visualViewport; if (!vv) return;
-    const root = document.documentElement;
-    const update = () => {
-      const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-      root.style.setProperty('--kb', `${kb}px`);
-      root.classList.toggle('kb-open', kb > 80);
+    const root = document.documentElement, vv = window.visualViewport;
+    const phone = window.matchMedia('(pointer: coarse) and (max-width: 820px)');
+    let savedY = 0, timer = 0;
+    const vars = () => {
+      root.style.setProperty('--vv-h', `${Math.round(vv ? vv.height : window.innerHeight)}px`);
+      root.style.setProperty('--vv-top', `${Math.round(vv ? vv.offsetTop : 0)}px`);
     };
-    update();
-    vv.addEventListener('resize', update); vv.addEventListener('scroll', update);
-    return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update); root.style.removeProperty('--kb'); root.classList.remove('kb-open'); };
+    const inEditor = () => !!document.activeElement?.closest('.cm-editor');
+    const apply = () => {
+      const on = phone.matches && inEditor();
+      if (on === editing) return;
+      root.classList.toggle('editing', on); setEditing(on);
+      if (!on) requestAnimationFrame(() => window.scrollTo(0, savedY));
+    };
+    const remember = () => { if (!editing) savedY = window.scrollY; };
+    const soon = () => { window.clearTimeout(timer); timer = window.setTimeout(apply, 80); };
+    vars(); vv?.addEventListener('resize', vars); vv?.addEventListener('scroll', vars);
+    window.addEventListener('pointerdown', remember, { capture: true, passive: true });
+    document.addEventListener('focusin', soon); document.addEventListener('focusout', soon);
+    window.addEventListener('hashchange', soon); window.addEventListener('popstate', soon);
+    return () => {
+      vv?.removeEventListener('resize', vars); vv?.removeEventListener('scroll', vars);
+      window.removeEventListener('pointerdown', remember, { capture: true } as EventListenerOptions);
+      document.removeEventListener('focusin', soon); document.removeEventListener('focusout', soon);
+      window.removeEventListener('hashchange', soon); window.removeEventListener('popstate', soon);
+      root.classList.remove('editing'); setEditing(false);
+    };
   }, []);
 }
 
